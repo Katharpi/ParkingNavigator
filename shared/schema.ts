@@ -23,14 +23,14 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// User storage table
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
+  id: serial("id").primaryKey(),
+  username: varchar("username").notNull().unique(),
+  password: varchar("password").notNull(),
+  email: varchar("email"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -49,14 +49,31 @@ export const parkingSpaces = pgTable("parking_spaces", {
 // Parking history for analytics
 export const parkingHistory = pgTable("parking_history", {
   id: serial("id").primaryKey(),
-  spaceId: serial("space_id").references(() => parkingSpaces.id),
+  spaceId: serial("space_id").references(() => parkingSpaces.id).notNull(),
   action: varchar("action").notNull(), // occupied, freed, maintenance
   timestamp: timestamp("timestamp").defaultNow(),
-  userId: varchar("user_id").references(() => users.id),
+  userId: serial("user_id").references(() => users.id).notNull(),
 });
 
-export type UpsertUser = typeof users.$inferInsert;
+export type InsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Login schema
+export const loginSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export const registerSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
+
+export type LoginRequest = z.infer<typeof loginSchema>;
+export type RegisterRequest = z.infer<typeof registerSchema>;
 
 export const insertParkingSpaceSchema = createInsertSchema(parkingSpaces).omit({
   id: true,

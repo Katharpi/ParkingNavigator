@@ -3,11 +3,13 @@ import {
   parkingSpaces,
   parkingHistory,
   type User,
-  type UpsertUser,
+  type InsertUser,
   type ParkingSpace,
   type InsertParkingSpace,
   type UpdateParkingSpace,
   type ParkingHistory,
+  type LoginRequest,
+  type RegisterRequest,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, sql } from "drizzle-orm";
@@ -15,9 +17,10 @@ import { eq, desc, count, sql } from "drizzle-orm";
 // Interface for storage operations
 export interface IStorage {
   // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  loginUser(credentials: LoginRequest): Promise<User | null>;
   
   // Parking space operations
   getAllParkingSpaces(): Promise<ParkingSpace[]>;
@@ -44,25 +47,34 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
-
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
       .returning();
+    return user;
+  }
+
+  async loginUser(credentials: LoginRequest): Promise<User | null> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, credentials.username));
+    
+    if (!user || user.password !== credentials.password) {
+      return null;
+    }
+    
     return user;
   }
 
@@ -134,13 +146,13 @@ export class DatabaseStorage implements IStorage {
     return stats;
   }
 
-  async addParkingHistory(spaceId: number, action: string, userId?: string): Promise<ParkingHistory> {
+  async addParkingHistory(spaceId: number, action: string, userId?: number): Promise<ParkingHistory> {
     const [history] = await db
       .insert(parkingHistory)
       .values({
         spaceId,
         action,
-        userId,
+        userId: userId || 1, // Default user for now
       })
       .returning();
     return history;
