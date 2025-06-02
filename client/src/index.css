@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 11% 98%; /* #F5F7FA */
+  --foreground: 215 25% 27%; /* #3B4A5C */
+  --muted: 210 11% 96%; /* #F1F4F7 */
+  --muted-foreground: 215 14% 54%; /* #6B7A8A */
+  --popover: 0 0% 100%; /* #FFFFFF */
+  --popover-foreground: 215 25% 27%; /* #3B4A5C */
+  --card: 0 0% 100%; /* #FFFFFF */
+  --card-foreground: 215 25% 27%; /* #3B4A5C */
+  --border: 215 12% 84%; /* #D1D9E0 */
+  --input: 215 12% 84%; /* #D1D9E0 */
+  --primary: 213 94% 54%; /* #2563EB */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF */
+  --secondary: 210 11% 96%; /* #F1F4F7 */
+  --secondary-foreground: 215 25% 27%; /* #3B4A5C */
+  --accent: 210 11% 96%; /* #F1F4F7 */
+  --accent-foreground: 215 25% 27%; /* #3B4A5C */
+  --destructive: 0 84% 60%; /* #EF4444 */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+  --ring: 213 94% 54%; /* #2563EB */
+  --radius: 0.5rem;
+  
+  /* Custom parking colors */
+  --parking-available: 142 76% 36%; /* #10B981 */
+  --parking-occupied: 0 84% 60%; /* #EF4444 */
+  --parking-maintenance: 45 93% 47%; /* #F59E0B */
+}
+
+.dark {
+  --background: 215 28% 17%; /* #1E293B */
+  --foreground: 210 20% 98%; /* #F8FAFC */
+  --muted: 215 28% 17%; /* #1E293B */
+  --muted-foreground: 215 20% 65%; /* #94A3B8 */
+  --popover: 215 28% 17%; /* #1E293B */
+  --popover-foreground: 210 20% 98%; /* #F8FAFC */
+  --card: 215 28% 17%; /* #1E293B */
+  --card-foreground: 210 20% 98%; /* #F8FAFC */
+  --border: 215 28% 25%; /* #334155 */
+  --input: 215 28% 25%; /* #334155 */
+  --primary: 213 94% 54%; /* #2563EB */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF */
+  --secondary: 215 28% 25%; /* #334155 */
+  --secondary-foreground: 210 20% 98%; /* #F8FAFC */
+  --accent: 215 28% 25%; /* #334155 */
+  --accent-foreground: 210 20% 98%; /* #F8FAFC */
+  --destructive: 0 84% 60%; /* #EF4444 */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+  --ring: 213 94% 54%; /* #2563EB */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Parking space hover effects */
+  .parking-space {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .parking-space:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}
+
+@layer components {
+  /* Material Design inspired shadows */
+  .shadow-material {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.1);
+  }
+  
+  .shadow-material-lg {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12), 0 16px 32px rgba(0,0,0,0.12);
+  }
+  
+  /* Ripple effect for buttons */
+  .ripple {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .ripple::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+  
+  .ripple:active::before {
+    width: 300px;
+    height: 300px;
+  }
+}
