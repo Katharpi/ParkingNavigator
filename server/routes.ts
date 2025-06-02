@@ -1,27 +1,92 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertParkingSpaceSchema, updateParkingSpaceSchema } from "@shared/schema";
+import { getSession, isAuthenticated } from "./auth";
+import { insertParkingSpaceSchema, updateParkingSpaceSchema, loginSchema, registerSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Session middleware
+  app.use(getSession());
 
   // Initialize parking spaces on startup
   await storage.initializeParkingSpaces();
 
+  // Initialize a default admin user
+  const existingUser = await storage.getUserByUsername("admin");
+  if (!existingUser) {
+    await storage.createUser({
+      username: "admin",
+      password: "admin123",
+      email: "admin@parking.com",
+      firstName: "Admin",
+      lastName: "User"
+    });
+  }
+
   // Auth routes
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const credentials = loginSchema.parse(req.body);
+      const user = await storage.loginUser(credentials);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      (req.session as any).userId = user.id;
+      res.json({ message: "Login successful", user: { id: user.id, username: user.username, email: user.email, firstName: user.firstName, lastName: user.lastName } });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const userData = registerSchema.parse(req.body);
+      const existingUser = await storage.getUserByUsername(userData.username);
+      
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      const user = await storage.createUser(userData);
+      (req.session as any).userId = user.id;
+      res.json({ message: "Registration successful", user: { id: user.id, username: user.username, email: user.email, firstName: user.firstName, lastName: user.lastName } });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.session as any).userId;
       const user = await storage.getUser(userId);
-      res.json(user);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ id: user.id, username: user.username, email: user.email, firstName: user.firstName, lastName: user.lastName });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Could not log out" });
+      }
+      res.json({ message: "Logout successful" });
+    });
   });
 
   // Parking spaces routes
@@ -56,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedSpace = await storage.updateParkingSpace(spaceId, updates);
       
       // Log the action
-      const userId = req.user.claims.sub;
+      const userId = (req.session as any).userId;
       const action = updates.status === 'occupied' ? 'occupied' : 
                     updates.status === 'available' ? 'freed' : 'maintenance';
       await storage.addParkingHistory(spaceId, action, userId);
@@ -77,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newSpace = await storage.createParkingSpace(spaceData);
       
       // Log the creation
-      const userId = req.user.claims.sub;
+      const userId = (req.session as any).userId;
       await storage.addParkingHistory(newSpace.id, 'created', userId);
 
       res.status(201).json(newSpace);

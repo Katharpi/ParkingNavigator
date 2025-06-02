@@ -38,7 +38,7 @@ export interface IStorage {
   }>;
   
   // Parking history
-  addParkingHistory(spaceId: number, action: string, userId?: string): Promise<ParkingHistory>;
+  addParkingHistory(spaceId: number, action: string, userId?: number): Promise<ParkingHistory>;
   getRecentHistory(limit?: number): Promise<ParkingHistory[]>;
   
   // Initialize default parking spaces
